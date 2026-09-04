@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Borrower Copilot · Lokta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="shell">
+<header class="top"><div><span class="eyebrow">LOKTA · BORROWER COPILOT</span><h1>Walk into the lender <em>informed.</em></h1></div><button class="theme" onclick="toggleTheme()">◐ Theme</button></header>
+
+<div th:if="${page == 'form'}">
+  <section class="hero">
+    <p>Answer the minimum questions. The app separates <b>illustrative lender capacity</b> from what you can <b>safely carry</b>, gives a rate band, and builds a negotiation card.</p>
+    <div class="notice">No login · No bureau pull · No data is stored by this demo.</div>
+  </section>
+  <form action="/assess" method="post" id="assessment">
+    <div class="progress"><span id="progressBar"></span></div>
+    <section class="card step active">
+      <div class="stepno">01 / 04</div><h2>What are you borrowing for?</h2>
+      <label>Loan type<select name="loanType" required><option value="PERSONAL">Personal loan</option><option value="HOME">Home loan</option><option value="LAP">Loan against property</option><option value="BUSINESS">Business loan</option><option value="GOLD">Gold loan</option><option value="TWO_WHEELER">Two-wheeler loan</option></select></label>
+      <label>Purpose<select name="purpose" required><option value="WEDDING">Wedding / family event</option><option value="PRODUCTIVE">Business / productive use</option><option value="EDUCATION">Education</option><option value="EMERGENCY">Emergency</option><option value="VEHICLE">Vehicle</option><option value="OTHER">Other</option></select></label>
+      <label>Amount wanted (₹)<input name="requested" type="number" min="0" step="1000" required placeholder="800000"></label>
+      <label>Age<input name="age" type="number" min="18" max="90" required placeholder="29"></label>
+      <button type="button" class="primary next">Continue</button>
+    </section>
+
+    <section class="card step">
+      <div class="stepno">02 / 04</div><h2>Show me your monthly reality.</h2>
+      <label>Net monthly income (₹)<input name="income" type="number" min="0" step="1000" required placeholder="110000"></label>
+      <label>Income type<select name="incomeType" required><option value="SALARIED">Salaried</option><option value="SELF_EMPLOYED">Self-employed</option><option value="INFORMAL">Informal / mixed</option></select></label>
+      <label>Existing EMIs (₹/month)<input name="existingEmi" type="number" min="0" step="500" required placeholder="14000"></label>
+      <label>Household expenses excluding EMIs (₹/month)<input name="expenses" type="number" min="0" step="500" required placeholder="40000"></label>
+      <label>Variable share of income (%)<input name="variablePct" type="number" min="0" max="100" step="5" value="0"></label>
+      <div class="actions"><button type="button" class="ghost prev">Back</button><button type="button" class="primary next">Continue</button></div>
+    </section>
+
+    <section class="card step">
+      <div class="stepno">03 / 04</div><h2>How strong is your credit profile?</h2>
+      <label>Credit score <span class="hint">Leave blank if unknown.</span><input name="creditScore" type="number" min="300" max="900" placeholder="780"></label>
+      <label>Collateral value (₹) <span class="hint">Only if relevant.</span><input name="collateral" type="number" min="0" step="10000" value="0"></label>
+      <div class="callout"><b>Unknown is not zero.</b><br>Your rate range gets wider when you don't know your score; the app does not punish you with an invented low score.</div>
+      <div class="actions"><button type="button" class="ghost prev">Back</button><button type="button" class="primary next">Continue</button></div>
+    </section>
+
+    <section class="card step">
+      <div class="stepno">04 / 04</div><h2>Ready for your borrower number?</h2>
+      <p class="muted">We will show: borrow / don't / borrow less, lender capacity, safe capacity, a fair-rate band, EMI ceiling, stress case, and a one-screen Negotiation Card.</p>
+      <div class="checklist">
+        <label class="check"><input type="checkbox" name="confirmReasoning" required><span class="box">✓</span><span>I understand that every major number is based on the answers and assumptions shown.</span></label>
+        <label class="check"><input type="checkbox" name="confirmRanges" required><span class="box">✓</span><span>I understand that missing information makes the ranges wider.</span></label>
+        <label class="check"><input type="checkbox" name="confirmDisclaimer" required><span class="box">✓</span><span>I understand this is a self-assessment, not a lender sanction or guarantee.</span></label>
+      </div>
+      <p id="checkError" class="check-error" hidden>Please tick all three boxes before building your card.</p>
+      <div class="actions"><button type="button" class="ghost prev">Back</button><button class="primary" id="buildCard" type="submit">Build my card →</button></div>
+    </section>
+  </form>
+</div>
+
+<div th:if="${page == 'result'}">
+<section class="result-head">
+  <div><span class="eyebrow">YOUR BORROWER BRIEF</span><h2 th:text="${r.verdict}">BORROW</h2><p th:text="${r.verdictReason}"></p></div>
+  <div class="confidence"><span th:text="${r.confidence} + '%'">72%</span><small>confidence</small></div>
+</section>
+<section class="grid">
+  <article class="metric"><span>Lender likely max</span><strong th:text="${'₹' + #numbers.formatInteger(r.lenderMax, 1, 'COMMA')}"></strong><p>Illustrative FOIR-style capacity, not a lender decision.</p></article>
+  <article class="metric featured"><span>Use this safe max</span><strong th:text="${'₹' + #numbers.formatInteger(r.safeMax, 1, 'COMMA')}"></strong><p>Built from a more conservative borrower affordability cap and your entered expenses.</p></article>
+  <article class="metric"><span>Fair interest rate</span><strong th:text="${r.fairLow + '–' + r.fairHigh + '%'}"></strong><p>Band, not a point. Processing fee assumption: <b th:text="${r.processingFeePct + '%'}"></b>.</p></article>
+  <article class="metric"><span>EMI ceiling</span><strong th:text="${'₹' + #numbers.formatInteger(r.emiCeiling, 1, 'COMMA')}"></strong><p>Do not agree to a monthly EMI above this without reducing other outflow.</p></article>
+</section>
+
+<section class="card stress">
+  <div><span class="eyebrow">STRESS CASE</span><h3>What if the rate rises?</h3>
+  <p th:text="${'At an illustrative ' + r.stressRate + '% rate, prefer the shorter exposure only if the EMI remains below your ceiling. Otherwise reduce the principal.'}"></p>
+  <div class="bars"><div><span>Base rate</span><b th:text="${r.baseRate + '%'}"></b></div><div><span>Stress rate</span><b th:text="${r.stressRate + '%'}"></b></div></div>
+  </div>
+</section>
+
+<section class="card card-negotiation">
+  <div class="cardtop"><div><span class="eyebrow">NEGOTIATION CARD</span><h2>Take this to the branch.</h2></div><button class="ghost" onclick="window.print()">Print / Save PDF</button></div>
+  <div class="quote">“For my profile, I should target <b th:text="${r.fairLow + '–' + r.fairHigh + '%'}"></b>. My safe borrowing ceiling is <b th:text="${'₹' + #numbers.formatInteger(r.safeMax, 1, 'COMMA')}"></b> and my EMI ceiling is <b th:text="${'₹' + #numbers.formatInteger(r.emiCeiling, 1, 'COMMA')}"></b>.”</div>
+  <ul><li th:each="x : ${r.reasons}" th:text="${x}"></li></ul>
+  <div th:if="${!r.warnings.isEmpty()}" class="warnings"><b>Watch-outs</b><ul><li th:each="x : ${r.warnings}" th:text="${x}"></li></ul></div>
+  <p class="fine">All figures are illustrative self-assessment outputs based on the rules in RULES.md. They are not a credit decision, financial advice, or a guarantee of eligibility/rate.</p>
+</section>
+<a class="restart" href="/">← Start another assessment</a>
+</div>
+
+<footer>Lokta Borrower Copilot · rules are separated from the UI · no personal data persistence</footer>
+</div>
+<script src="/app.js"></script>
+</body></html>
